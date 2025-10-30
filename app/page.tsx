@@ -1204,6 +1204,37 @@ export default function WatermarkForge() {
                         🗑️ Remove
                       </button>
                     </div>
+                    <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: text.positionMode === 'relative' ? '#d4edda' : '#fff3cd', borderRadius: '4px' }}>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '6px',
+                        color: '#495057',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}>
+                        Positioning Mode:
+                      </label>
+                      <select
+                        value={text.positionMode}
+                        onChange={(e) => updateText(text.id, { positionMode: e.target.value as 'absolute' | 'relative' })}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          border: '1px solid #ced4da',
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="absolute">Absolute (Fixed pixels)</option>
+                        <option value="relative">Relative (% - Adapts to image size)</option>
+                      </select>
+                      {text.positionMode === 'relative' && (
+                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#28a745' }}>
+                          ✓ Text will scale and position proportionally on all images!
+                        </p>
+                      )}
+                    </div>
                     <div style={{ marginBottom: '12px' }}>
                       <label style={{ 
                         display: 'block', 
@@ -1365,6 +1396,37 @@ export default function WatermarkForge() {
                       >
                         🗑️ Remove
                       </button>
+                    </div>
+                    <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: frame.positionMode === 'relative' ? '#d4edda' : '#fff3cd', borderRadius: '4px' }}>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '6px',
+                        color: '#495057',
+                        fontSize: '13px',
+                        fontWeight: '500'
+                      }}>
+                        Positioning Mode:
+                      </label>
+                      <select
+                        value={frame.positionMode}
+                        onChange={(e) => updateFrame(frame.id, { positionMode: e.target.value as 'absolute' | 'relative' })}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          border: '1px solid #ced4da',
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="absolute">Absolute (Fixed pixels)</option>
+                        <option value="relative">Relative (% - Adapts to image size)</option>
+                      </select>
+                      {frame.positionMode === 'relative' && (
+                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#28a745' }}>
+                          ✓ Frame will scale and position proportionally on all images!
+                        </p>
+                      )}
                     </div>
                     <div style={{ marginBottom: '12px' }}>
                       <label style={{ 
