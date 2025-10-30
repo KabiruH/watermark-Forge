@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import JSZip from 'jszip';
+import Link from 'next/link';
 
 interface ImageFile {
   file: File;
@@ -18,9 +19,9 @@ interface Logo {
   height: number;
   opacity: number;
   positionMode: 'absolute' | 'relative';
-  relativeX?: number; // percentage 0-100
-  relativeY?: number; // percentage 0-100
-  relativeWidth?: number; // percentage of image width
+  relativeX?: number;
+  relativeY?: number;
+  relativeWidth?: number;
 }
 
 interface TextWatermark {
@@ -35,7 +36,7 @@ interface TextWatermark {
   positionMode: 'absolute' | 'relative';
   relativeX?: number;
   relativeY?: number;
-  relativeFontSize?: number; // percentage of image width
+  relativeFontSize?: number;
 }
 
 interface Frame {
@@ -202,50 +203,41 @@ export default function WatermarkForge() {
     
     img.src = previewImage;
     img.onload = () => {
-      // Set canvas to match image dimensions
       canvas.width = img.width;
       canvas.height = img.height;
       setPreviewDimensions({ width: img.width, height: img.height });
 
-      // Sync relative values based on current preview image
       syncRelativeFromAbsolute(img.width, img.height);
 
-      // Draw base image
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
 
-      // Draw frames
       frames.forEach(frame => {
         ctx.globalAlpha = frame.opacity;
         ctx.strokeStyle = frame.borderColor;
         ctx.lineWidth = frame.borderWidth;
         ctx.strokeRect(frame.x, frame.y, frame.width, frame.height);
         
-        // Draw resize handles
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#3498db';
+        ctx.fillStyle = '#ff6b35';
         const handleSize = 8;
         
-        // Corner handles
         ctx.fillRect(frame.x - handleSize/2, frame.y - handleSize/2, handleSize, handleSize);
         ctx.fillRect(frame.x + frame.width - handleSize/2, frame.y - handleSize/2, handleSize, handleSize);
         ctx.fillRect(frame.x - handleSize/2, frame.y + frame.height - handleSize/2, handleSize, handleSize);
         ctx.fillRect(frame.x + frame.width - handleSize/2, frame.y + frame.height - handleSize/2, handleSize, handleSize);
         
-        // Edge handles
         ctx.fillRect(frame.x + frame.width/2 - handleSize/2, frame.y - handleSize/2, handleSize, handleSize);
         ctx.fillRect(frame.x + frame.width/2 - handleSize/2, frame.y + frame.height - handleSize/2, handleSize, handleSize);
         ctx.fillRect(frame.x - handleSize/2, frame.y + frame.height/2 - handleSize/2, handleSize, handleSize);
         ctx.fillRect(frame.x + frame.width - handleSize/2, frame.y + frame.height/2 - handleSize/2, handleSize, handleSize);
       });
 
-      // Draw logos
       logos.forEach(logo => {
         ctx.globalAlpha = logo.opacity;
         ctx.drawImage(logo.image, logo.x, logo.y, logo.width, logo.height);
       });
 
-      // Draw text watermarks
       textWatermarks.forEach(text => {
         ctx.globalAlpha = text.opacity;
         ctx.font = `${text.fontSize}px ${text.fontFamily}`;
@@ -268,7 +260,6 @@ export default function WatermarkForge() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Check if clicking on a frame (check resize handles first, then move)
     for (let i = frames.length - 1; i >= 0; i--) {
       const frame = frames[i];
       const resizeHandle = getFrameResizeHandle(frame, x, y);
@@ -288,7 +279,6 @@ export default function WatermarkForge() {
       }
     }
 
-    // Check if clicking on a logo
     for (let i = logos.length - 1; i >= 0; i--) {
       const logo = logos[i];
       if (x >= logo.x && x <= logo.x + logo.width &&
@@ -299,7 +289,6 @@ export default function WatermarkForge() {
       }
     }
 
-    // Check if clicking on text
     for (let i = textWatermarks.length - 1; i >= 0; i--) {
       const text = textWatermarks[i];
       const ctx = canvas.getContext('2d');
@@ -330,7 +319,6 @@ export default function WatermarkForge() {
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Update cursor when not dragging
     if (!dragging) {
       let newCursor = 'grab';
       
@@ -420,7 +408,6 @@ export default function WatermarkForge() {
           break;
       }
       
-      // Prevent negative dimensions
       if (newWidth > 10 && newHeight > 10) {
         updateFrame(dragging.id, {
           x: newX,
@@ -432,17 +419,14 @@ export default function WatermarkForge() {
     }
   };
 
-  // Handle mouse up
   const handleMouseUp = () => {
     setDragging(null);
     setInitialFrameState(null);
   };
 
-  // Helper function to check if mouse is on frame resize handle
   const getFrameResizeHandle = (frame: Frame, x: number, y: number): string | null => {
     const handleSize = 10;
     
-    // Check corners first
     if (x >= frame.x - handleSize && x <= frame.x + handleSize && 
         y >= frame.y - handleSize && y <= frame.y + handleSize) return 'nw';
     if (x >= frame.x + frame.width - handleSize && x <= frame.x + frame.width + handleSize && 
@@ -452,7 +436,6 @@ export default function WatermarkForge() {
     if (x >= frame.x + frame.width - handleSize && x <= frame.x + frame.width + handleSize && 
         y >= frame.y + frame.height - handleSize && y <= frame.y + frame.height + handleSize) return 'se';
     
-    // Check edges
     if (x >= frame.x - handleSize && x <= frame.x + handleSize && 
         y >= frame.y && y <= frame.y + frame.height) return 'w';
     if (x >= frame.x + frame.width - handleSize && x <= frame.x + frame.width + handleSize && 
@@ -465,9 +448,7 @@ export default function WatermarkForge() {
     return null;
   };
 
-  // Helper: Update relative values when dragging in absolute mode
   const syncRelativeFromAbsolute = (imgWidth: number, imgHeight: number) => {
-    // Update logos
     setLogos(prev => prev.map(logo => ({
       ...logo,
       relativeX: (logo.x / imgWidth) * 100,
@@ -475,7 +456,6 @@ export default function WatermarkForge() {
       relativeWidth: (logo.width / imgWidth) * 100
     })));
 
-    // Update text
     setTextWatermarks(prev => prev.map(text => ({
       ...text,
       relativeX: (text.x / imgWidth) * 100,
@@ -483,7 +463,6 @@ export default function WatermarkForge() {
       relativeFontSize: (text.fontSize / imgWidth) * 100
     })));
 
-    // Update frames
     setFrames(prev => prev.map(frame => ({
       ...frame,
       relativeX: (frame.x / imgWidth) * 100,
@@ -494,7 +473,6 @@ export default function WatermarkForge() {
     })));
   };
 
-  // Helper: Calculate absolute positions from relative values
   const getAbsolutePosition = (imgWidth: number, imgHeight: number) => {
     const absoluteLogos = logos.map(logo => ({
       ...logo,
@@ -547,7 +525,6 @@ export default function WatermarkForge() {
     return { absoluteLogos, absoluteTexts, absoluteFrames };
   };
 
-  // Apply watermarks to single image
   const applyWatermark = async (imageUrl: string): Promise<Blob> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -561,13 +538,10 @@ export default function WatermarkForge() {
         canvas.width = img.width;
         canvas.height = img.height;
 
-        // Draw base image
         ctx.drawImage(img, 0, 0);
 
-        // Get absolute positions for this specific image
         const { absoluteLogos, absoluteTexts, absoluteFrames } = getAbsolutePosition(img.width, img.height);
 
-        // Draw frames
         absoluteFrames.forEach(frame => {
           ctx.globalAlpha = frame.opacity;
           ctx.strokeStyle = frame.borderColor;
@@ -575,13 +549,11 @@ export default function WatermarkForge() {
           ctx.strokeRect(frame.x, frame.y, frame.width, frame.height);
         });
 
-        // Draw logos
         absoluteLogos.forEach(logo => {
           ctx.globalAlpha = logo.opacity;
           ctx.drawImage(logo.image, logo.x, logo.y, logo.width, logo.height);
         });
 
-        // Draw text watermarks
         absoluteTexts.forEach(text => {
           ctx.globalAlpha = text.opacity;
           ctx.font = `${text.fontSize}px ${text.fontFamily}`;
@@ -591,7 +563,6 @@ export default function WatermarkForge() {
 
         ctx.globalAlpha = 1;
 
-        // Convert to blob
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
         }, 'image/png');
@@ -599,7 +570,6 @@ export default function WatermarkForge() {
     });
   };
 
-  // Process all images
   const processAllImages = async () => {
     if (images.length === 0) {
       alert('Please upload images first!');
@@ -625,7 +595,6 @@ export default function WatermarkForge() {
       setProgress(((i + 1) / images.length) * 100);
     }
 
-    // Generate ZIP and download
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
@@ -637,7 +606,6 @@ export default function WatermarkForge() {
     setProgress(0);
   };
 
-  // Save preset
   const savePreset = () => {
     if (!presetName.trim()) {
       alert('Please enter a preset name!');
@@ -648,7 +616,7 @@ export default function WatermarkForge() {
       name: presetName,
       logos: logos.map(logo => ({
         ...logo,
-        image: logo.image.src // Save image source
+        image: logo.image.src
       })),
       textWatermarks,
       frames
@@ -662,7 +630,6 @@ export default function WatermarkForge() {
     setPresetName('');
   };
 
-  // Load preset
   const loadPreset = () => {
     const presets = JSON.parse(localStorage.getItem('watermarkPresets') || '[]');
     
@@ -686,7 +653,6 @@ export default function WatermarkForge() {
       return;
     }
 
-    // Restore logos
     const restoredLogos = preset.logos.map((logoData: any) => {
       const img = new Image();
       img.src = logoData.image;
@@ -706,30 +672,74 @@ export default function WatermarkForge() {
   return (
     <div style={{ 
       minHeight: '100vh',
-      backgroundColor: '#f5f5f5',
+      background: 'linear-gradient(135deg, #1a1a1a 0%, #2d1810 100%)',
       padding: '20px',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         {/* Header */}
         <div style={{ 
-          backgroundColor: '#2c3e50',
-          padding: '30px',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 107, 53, 0.3)',
+          padding: '25px 30px',
           borderRadius: '12px',
           marginBottom: '30px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          <h1 style={{ 
-            fontSize: '36px', 
-            fontWeight: 'bold', 
-            margin: '0',
-            color: '#ecf0f1'
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              background: 'linear-gradient(135deg, #ff6b35 0%, #cc5500 100%)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '22px'
+            }}>
+              ⚒️
+            </div>
+            <div>
+              <h1 style={{ 
+                fontSize: '28px', 
+                fontWeight: 'bold', 
+                margin: '0',
+                background: 'linear-gradient(135deg, #ff6b35 0%, #f4a261 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                WatermarkForge
+              </h1>
+              <p style={{ margin: '5px 0 0 0', color: '#999', fontSize: '14px' }}>
+                Editor
+              </p>
+            </div>
+          </div>
+          
+          <Link href="/" style={{
+            padding: '10px 20px',
+            background: 'rgba(255, 107, 53, 0.1)',
+            border: '1px solid rgba(255, 107, 53, 0.3)',
+            color: '#ff6b35',
+            textDecoration: 'none',
+            borderRadius: '6px',
+            fontWeight: '500',
+            fontSize: '14px',
+            transition: 'all 0.2s'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 107, 53, 0.2)';
+            e.currentTarget.style.borderColor = 'rgba(255, 107, 53, 0.5)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 107, 53, 0.1)';
+            e.currentTarget.style.borderColor = 'rgba(255, 107, 53, 0.3)';
           }}>
-            ⚒️ WatermarkForge
-          </h1>
-          <p style={{ margin: '10px 0 0 0', color: '#bdc3c7', fontSize: '16px' }}>
-            Batch watermark your images with logos, text, and frames
-          </p>
+            ← Back to Home
+          </Link>
         </div>
 
         {/* Main Grid */}
@@ -745,16 +755,16 @@ export default function WatermarkForge() {
             
             {/* Upload Images Section */}
             <div style={{ 
-              backgroundColor: 'white',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 107, 53, 0.2)',
               padding: '20px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              borderRadius: '8px'
             }}>
               <h2 style={{ 
                 fontSize: '18px', 
                 fontWeight: 'bold', 
                 marginBottom: '15px',
-                color: '#2c3e50'
+                color: '#ff6b35'
               }}>
                 📁 Upload Images
               </h2>
@@ -766,19 +776,22 @@ export default function WatermarkForge() {
                 style={{ 
                   width: '100%',
                   padding: '10px',
-                  border: '2px dashed #3498db',
+                  border: '2px dashed rgba(255, 107, 53, 0.5)',
                   borderRadius: '6px',
-                  backgroundColor: '#ecf8ff',
-                  cursor: 'pointer'
+                  background: 'rgba(255, 107, 53, 0.05)',
+                  cursor: 'pointer',
+                  color: '#ccc',
+                  fontSize: '14px'
                 }}
               />
               <div style={{ 
                 marginTop: '10px',
                 padding: '8px 12px',
-                backgroundColor: '#e8f5e9',
+                background: 'rgba(255, 107, 53, 0.1)',
                 borderRadius: '4px',
-                color: '#2e7d32',
-                fontWeight: '500'
+                color: '#ff6b35',
+                fontWeight: '500',
+                fontSize: '14px'
               }}>
                 ✓ {images.length} images selected
               </div>
@@ -786,27 +799,27 @@ export default function WatermarkForge() {
 
             {/* Add Elements Section */}
             <div style={{ 
-              backgroundColor: 'white',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 107, 53, 0.2)',
               padding: '20px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              borderRadius: '8px'
             }}>
               <h2 style={{ 
                 fontSize: '18px', 
                 fontWeight: 'bold', 
                 marginBottom: '15px',
-                color: '#2c3e50'
+                color: '#ff6b35'
               }}>
                 ➕ Add Elements
               </h2>
               
-              {/* Add Logos */}
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ 
                   display: 'block',
                   marginBottom: '8px',
-                  color: '#34495e',
-                  fontWeight: '500'
+                  color: '#ccc',
+                  fontWeight: '500',
+                  fontSize: '14px'
                 }}>
                   🖼️ Logos
                 </label>
@@ -818,27 +831,28 @@ export default function WatermarkForge() {
                   style={{ 
                     width: '100%',
                     padding: '8px',
-                    border: '1px solid #ddd',
+                    border: '1px solid rgba(255, 107, 53, 0.3)',
                     borderRadius: '4px',
-                    fontSize: '14px'
+                    fontSize: '13px',
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#ccc'
                   }}
                 />
                 <p style={{ 
                   margin: '8px 0 0 0',
-                  color: '#7f8c8d',
-                  fontSize: '13px'
+                  color: '#999',
+                  fontSize: '12px'
                 }}>
                   {logos.length} logo(s) added
                 </p>
               </div>
 
-              {/* Add Text */}
               <button
                 onClick={addTextWatermark}
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: '#3498db',
+                  background: 'linear-gradient(135deg, #ff6b35 0%, #cc5500 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -851,13 +865,12 @@ export default function WatermarkForge() {
                 ➕ Add Text Watermark
               </button>
 
-              {/* Add Frame */}
               <button
                 onClick={addFrame}
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: '#9b59b6',
+                  background: 'linear-gradient(135deg, #f4a261 0%, #e76f51 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',
@@ -872,10 +885,10 @@ export default function WatermarkForge() {
               <div style={{ 
                 marginTop: '15px',
                 padding: '10px',
-                backgroundColor: '#f8f9fa',
+                background: 'rgba(0,0,0,0.3)',
                 borderRadius: '4px',
-                fontSize: '13px',
-                color: '#495057'
+                fontSize: '12px',
+                color: '#ccc'
               }}>
                 <div>📝 {textWatermarks.length} text watermark(s)</div>
                 <div>🖼️ {frames.length} frame(s)</div>
@@ -884,16 +897,16 @@ export default function WatermarkForge() {
 
             {/* Save/Load Presets */}
             <div style={{ 
-              backgroundColor: 'white',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 107, 53, 0.2)',
               padding: '20px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              borderRadius: '8px'
             }}>
               <h2 style={{ 
                 fontSize: '18px', 
                 fontWeight: 'bold', 
                 marginBottom: '15px',
-                color: '#2c3e50'
+                color: '#ff6b35'
               }}>
                 💾 Presets
               </h2>
@@ -905,10 +918,12 @@ export default function WatermarkForge() {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  border: '1px solid #ddd',
+                  border: '1px solid rgba(255, 107, 53, 0.3)',
                   borderRadius: '4px',
                   marginBottom: '10px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  background: 'rgba(0,0,0,0.3)',
+                  color: '#fff'
                 }}
               />
               <button
@@ -916,13 +931,14 @@ export default function WatermarkForge() {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  backgroundColor: '#27ae60',
+                  background: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
                   fontWeight: '500',
-                  marginBottom: '8px'
+                  marginBottom: '8px',
+                  fontSize: '14px'
                 }}
               >
                 💾 Save Current Setup
@@ -932,12 +948,13 @@ export default function WatermarkForge() {
                 style={{
                   width: '100%',
                   padding: '10px',
-                  backgroundColor: '#e67e22',
+                  background: 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  fontSize: '14px'
                 }}
               >
                 📂 Load Preset
@@ -951,14 +968,14 @@ export default function WatermarkForge() {
               style={{
                 width: '100%',
                 padding: '18px',
-                backgroundColor: processing ? '#95a5a6' : '#e74c3c',
+                background: processing ? 'rgba(100,100,100,0.5)' : 'linear-gradient(135deg, #ff6b35 0%, #cc5500 100%)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '16px',
                 fontWeight: 'bold',
                 cursor: processing ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                boxShadow: processing ? 'none' : '0 4px 15px rgba(255, 107, 53, 0.4)'
               }}
             >
               {processing ? `⏳ Processing... ${Math.round(progress)}%` : '⚡ Process All & Download ZIP'}
@@ -968,14 +985,14 @@ export default function WatermarkForge() {
               <div style={{
                 width: '100%',
                 height: '8px',
-                backgroundColor: '#ecf0f1',
+                background: 'rgba(0,0,0,0.3)',
                 borderRadius: '4px',
                 overflow: 'hidden'
               }}>
                 <div style={{
                   width: `${progress}%`,
                   height: '100%',
-                  backgroundColor: '#27ae60',
+                  background: 'linear-gradient(135deg, #ff6b35 0%, #cc5500 100%)',
                   transition: 'width 0.3s ease'
                 }} />
               </div>
@@ -988,27 +1005,27 @@ export default function WatermarkForge() {
             {/* Preview Canvas */}
             {previewImage && (
               <div style={{ 
-                backgroundColor: 'white',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 107, 53, 0.2)',
                 padding: '20px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                borderRadius: '8px'
               }}>
                 <h2 style={{ 
                   fontSize: '18px', 
                   fontWeight: 'bold', 
                   marginBottom: '15px',
-                  color: '#2c3e50'
+                  color: '#ff6b35'
                 }}>
                   👁️ Preview (Drag to Position)
                 </h2>
                 <div
                   style={{
-                    border: '3px solid #3498db',
+                    border: '2px solid rgba(255, 107, 53, 0.5)',
                     display: 'inline-block',
                     maxWidth: '100%',
                     overflow: 'auto',
                     borderRadius: '8px',
-                    backgroundColor: '#000'
+                    background: '#000'
                   }}
                 >
                   <canvas
@@ -1028,19 +1045,19 @@ export default function WatermarkForge() {
               </div>
             )}
 
-            {/* Logo Controls */}
+            {/* Logo Controls - continuing with burnt orange theme */}
             {logos.length > 0 && (
               <div style={{ 
-                backgroundColor: 'white',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 107, 53, 0.2)',
                 padding: '20px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                borderRadius: '8px'
               }}>
                 <h3 style={{ 
                   fontSize: '18px', 
                   fontWeight: 'bold', 
                   marginBottom: '15px',
-                  color: '#2c3e50'
+                  color: '#ff6b35'
                 }}>
                   🖼️ Logo Controls
                 </h3>
@@ -1048,9 +1065,9 @@ export default function WatermarkForge() {
                   <div key={logo.id} style={{ 
                     marginBottom: '20px', 
                     padding: '15px', 
-                    backgroundColor: '#f8f9fa', 
+                    background: 'rgba(0,0,0,0.3)', 
                     borderRadius: '6px',
-                    border: '1px solid #e9ecef'
+                    border: '1px solid rgba(255, 107, 53, 0.2)'
                   }}>
                     <div style={{ 
                       display: 'flex', 
@@ -1058,12 +1075,12 @@ export default function WatermarkForge() {
                       alignItems: 'center', 
                       marginBottom: '12px' 
                     }}>
-                      <strong style={{ color: '#2c3e50' }}>Logo {index + 1}</strong>
+                      <strong style={{ color: '#ff6b35' }}>Logo {index + 1}</strong>
                       <button
                         onClick={() => removeLogo(logo.id)}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: '#e74c3c',
+                          background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -1075,11 +1092,11 @@ export default function WatermarkForge() {
                         🗑️ Remove
                       </button>
                     </div>
-                    <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: logo.positionMode === 'relative' ? '#d4edda' : '#fff3cd', borderRadius: '4px' }}>
+                    <div style={{ marginBottom: '12px', padding: '10px', background: logo.positionMode === 'relative' ? 'rgba(46, 204, 113, 0.1)' : 'rgba(241, 196, 15, 0.1)', borderRadius: '4px', border: `1px solid ${logo.positionMode === 'relative' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(241, 196, 15, 0.3)'}` }}>
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1091,17 +1108,19 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           padding: '6px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
                           fontSize: '13px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: '#fff'
                         }}
                       >
                         <option value="absolute">Absolute (Fixed pixels)</option>
                         <option value="relative">Relative (% - Adapts to image size)</option>
                       </select>
                       {logo.positionMode === 'relative' && (
-                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#28a745' }}>
+                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#2ecc71' }}>
                           ✓ Logo will scale and position proportionally on all images!
                         </p>
                       )}
@@ -1110,7 +1129,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1136,7 +1155,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1157,19 +1176,19 @@ export default function WatermarkForge() {
               </div>
             )}
 
-            {/* Text Controls */}
+            {/* Text Controls - with burnt orange theme */}
             {textWatermarks.length > 0 && (
               <div style={{ 
-                backgroundColor: 'white',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 107, 53, 0.2)',
                 padding: '20px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                borderRadius: '8px'
               }}>
                 <h3 style={{ 
                   fontSize: '18px', 
                   fontWeight: 'bold', 
                   marginBottom: '15px',
-                  color: '#2c3e50'
+                  color: '#ff6b35'
                 }}>
                   📝 Text Controls
                 </h3>
@@ -1177,9 +1196,9 @@ export default function WatermarkForge() {
                   <div key={text.id} style={{ 
                     marginBottom: '20px', 
                     padding: '15px', 
-                    backgroundColor: '#f8f9fa', 
+                    background: 'rgba(0,0,0,0.3)', 
                     borderRadius: '6px',
-                    border: '1px solid #e9ecef'
+                    border: '1px solid rgba(255, 107, 53, 0.2)'
                   }}>
                     <div style={{ 
                       display: 'flex', 
@@ -1187,12 +1206,12 @@ export default function WatermarkForge() {
                       alignItems: 'center', 
                       marginBottom: '12px' 
                     }}>
-                      <strong style={{ color: '#2c3e50' }}>Text {index + 1}</strong>
+                      <strong style={{ color: '#ff6b35' }}>Text {index + 1}</strong>
                       <button
                         onClick={() => removeText(text.id)}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: '#e74c3c',
+                          background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -1204,11 +1223,11 @@ export default function WatermarkForge() {
                         🗑️ Remove
                       </button>
                     </div>
-                    <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: text.positionMode === 'relative' ? '#d4edda' : '#fff3cd', borderRadius: '4px' }}>
+                    <div style={{ marginBottom: '12px', padding: '10px', background: text.positionMode === 'relative' ? 'rgba(46, 204, 113, 0.1)' : 'rgba(241, 196, 15, 0.1)', borderRadius: '4px', border: `1px solid ${text.positionMode === 'relative' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(241, 196, 15, 0.3)'}` }}>
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1220,17 +1239,19 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           padding: '6px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
                           fontSize: '13px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: '#fff'
                         }}
                       >
                         <option value="absolute">Absolute (Fixed pixels)</option>
                         <option value="relative">Relative (% - Adapts to image size)</option>
                       </select>
                       {text.positionMode === 'relative' && (
-                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#28a745' }}>
+                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#2ecc71' }}>
                           ✓ Text will scale and position proportionally on all images!
                         </p>
                       )}
@@ -1239,7 +1260,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>Text:</label>
@@ -1250,9 +1271,11 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           padding: '8px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
-                          fontSize: '14px'
+                          fontSize: '14px',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: '#fff'
                         }}
                       />
                     </div>
@@ -1260,7 +1283,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>Font:</label>
@@ -1270,10 +1293,12 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           padding: '8px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
                           fontSize: '14px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: '#fff'
                         }}
                       >
                         <option value="Arial">Arial</option>
@@ -1289,7 +1314,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1308,7 +1333,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>Color:</label>
@@ -1319,9 +1344,10 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           height: '40px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.3)'
                         }}
                       />
                     </div>
@@ -1329,7 +1355,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1350,19 +1376,19 @@ export default function WatermarkForge() {
               </div>
             )}
 
-            {/* Frame Controls */}
+            {/* Frame Controls - with burnt orange theme */}
             {frames.length > 0 && (
               <div style={{ 
-                backgroundColor: 'white',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 107, 53, 0.2)',
                 padding: '20px',
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                borderRadius: '8px'
               }}>
                 <h3 style={{ 
                   fontSize: '18px', 
                   fontWeight: 'bold', 
                   marginBottom: '15px',
-                  color: '#2c3e50'
+                  color: '#ff6b35'
                 }}>
                   🖼️ Frame Controls
                 </h3>
@@ -1370,9 +1396,9 @@ export default function WatermarkForge() {
                   <div key={frame.id} style={{ 
                     marginBottom: '20px', 
                     padding: '15px', 
-                    backgroundColor: '#f8f9fa', 
+                    background: 'rgba(0,0,0,0.3)', 
                     borderRadius: '6px',
-                    border: '1px solid #e9ecef'
+                    border: '1px solid rgba(255, 107, 53, 0.2)'
                   }}>
                     <div style={{ 
                       display: 'flex', 
@@ -1380,12 +1406,12 @@ export default function WatermarkForge() {
                       alignItems: 'center', 
                       marginBottom: '12px' 
                     }}>
-                      <strong style={{ color: '#2c3e50' }}>Frame {index + 1}</strong>
+                      <strong style={{ color: '#ff6b35' }}>Frame {index + 1}</strong>
                       <button
                         onClick={() => removeFrame(frame.id)}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: '#e74c3c',
+                          background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -1397,11 +1423,11 @@ export default function WatermarkForge() {
                         🗑️ Remove
                       </button>
                     </div>
-                    <div style={{ marginBottom: '12px', padding: '10px', backgroundColor: frame.positionMode === 'relative' ? '#d4edda' : '#fff3cd', borderRadius: '4px' }}>
+                    <div style={{ marginBottom: '12px', padding: '10px', background: frame.positionMode === 'relative' ? 'rgba(46, 204, 113, 0.1)' : 'rgba(241, 196, 15, 0.1)', borderRadius: '4px', border: `1px solid ${frame.positionMode === 'relative' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(241, 196, 15, 0.3)'}` }}>
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1413,17 +1439,19 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           padding: '6px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
                           fontSize: '13px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: '#fff'
                         }}
                       >
                         <option value="absolute">Absolute (Fixed pixels)</option>
                         <option value="relative">Relative (% - Adapts to image size)</option>
                       </select>
                       {frame.positionMode === 'relative' && (
-                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#28a745' }}>
+                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#2ecc71' }}>
                           ✓ Frame will scale and position proportionally on all images!
                         </p>
                       )}
@@ -1432,7 +1460,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1451,7 +1479,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1470,7 +1498,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
@@ -1489,7 +1517,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>Border Color:</label>
@@ -1500,9 +1528,10 @@ export default function WatermarkForge() {
                         style={{
                           width: '100%',
                           height: '40px',
-                          border: '1px solid #ced4da',
+                          border: '1px solid rgba(255, 107, 53, 0.3)',
                           borderRadius: '4px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          background: 'rgba(0,0,0,0.3)'
                         }}
                       />
                     </div>
@@ -1510,7 +1539,7 @@ export default function WatermarkForge() {
                       <label style={{ 
                         display: 'block', 
                         marginBottom: '6px',
-                        color: '#495057',
+                        color: '#ccc',
                         fontSize: '13px',
                         fontWeight: '500'
                       }}>
